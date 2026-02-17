@@ -28,9 +28,7 @@ body {
     animation: fadeIn 2s forwards;
 }
 
-@keyframes fadeIn {
-    to { opacity: 1; }
-}
+@keyframes fadeIn { to { opacity: 1; } }
 
 #text {
     font-size: 36px;
@@ -79,7 +77,6 @@ input {
 </head>
 
 <body>
-
 <div class="container">
     <div id="text"></div>
     <div id="continueHint"></div>
@@ -87,7 +84,7 @@ input {
     <div id="buttons"></div>
 </div>
 
-<audio id="typeSound" src="https://www.soundjay.com/mechanical/typewriter-key-1.mp3"></audio>
+<audio id="typeSound" src="https://www.soundjay.com/mechanical/typewriter-key-1.mp3" preload="auto"></audio>
 
 <script>
 const textElement = document.getElementById("text");
@@ -117,17 +114,19 @@ function limparTela() {
 function typeWriter(text) {
     limparTela();
     textElement.innerHTML = "";
-
     let i = 0;
     let interval = setInterval(() => {
         textElement.innerHTML += text.charAt(i);
-        typeSound.currentTime = 0;
-        typeSound.play();
         i++;
         if (i >= text.length) {
             clearInterval(interval);
             continueHint.innerHTML = "Continuar";
             podeClicar = true;
+        }
+        // Só toca som se permitido
+        if (!typeSound.paused) {
+            typeSound.currentTime = 0;
+            typeSound.play().catch(()=>{});
         }
     }, 60);
 }
@@ -152,49 +151,39 @@ function pergunta(texto, chave) {
 function salvarResposta(chave) {
     const valor = document.getElementById("resposta").value.trim();
     if (!valor) return;
-
     respostas[chave] = valor;
     etapa++;
     fluxo();
 }
 
 function fluxo() {
-
     if (etapa < historiaIntro.length) {
         typeWriter(historiaIntro[etapa]);
         return;
     }
 
     switch (etapa) {
-
         case 3:
             pergunta("Qual é o nome do jogador?", "jogador");
             break;
-
         case 4:
             pergunta("Qual seu nome no reino?", "nome");
             break;
-
         case 5:
             pergunta("Qual é a idade?", "idade");
             break;
-
         case 6:
-            pergunta("Qual seu papel no reino, " + respostas.nome + "?", "papel");
+            pergunta("Qual seu papel no reino, " + (respostas.nome || "") + "?", "papel");
             break;
-
         case 7:
-            pergunta("Quais são os seus medo, " + respostas.nome + "?", "medo");
+            pergunta("Quais são os seus medo, " + (respostas.nome || "") + "?", "medo");
             break;
-
         case 8:
             pergunta("Quais suas maiores qualidades?", "forca");
             break;
-
         case 9:
             pergunta("Qual sua história?", "historia");
             break;
-
         case 10:
             limparTela();
             textElement.innerHTML = "Confirmar informações?";
@@ -203,16 +192,14 @@ function fluxo() {
                 <button onclick="confirmar(false)">Não</button>
             `;
             break;
-
         case 11:
             limparTela();
             textElement.innerHTML = "Salvando seu destino no reino...";
             enviarParaPlanilha();
             break;
-
         case 12:
             limparTela();
-            textElement.innerHTML = "O reino está a sua espera, " + respostas.nome + ".";
+            textElement.innerHTML = "O reino está a sua espera, " + (respostas.nome || "") + ".";
             break;
     }
 }
@@ -228,24 +215,24 @@ function confirmar(valor) {
 }
 
 function enviarParaPlanilha() {
-
     if (enviando) return;
     enviando = true;
 
+    // Garantir que respostas.medo existe
+    const payload = {
+        jogador: respostas.jogador || "",
+        nome: respostas.nome || "",
+        idade: respostas.idade || "",
+        papel: respostas.papel || "",
+        medo: respostas.medo || "",
+        forca: respostas.forca || "",
+        historia: respostas.historia || ""
+    };
+
     fetch("https://script.google.com/macros/s/AKfycbwLbSdrTVcJ1uP7utJXWJcA_oNoAmfEdNU35jj8SpLVHKdPjYHaHDierkUOvuR6J_zn/exec", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            jogador: respostas.jogador || "",
-            nome: respostas.nome || "",
-            idade: respostas.idade || "",
-            papel: respostas.papel || "",
-            medo: respostas.medo || "",
-            forca: respostas.forca || "",
-            historia: respostas.historia || ""
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(() => {
@@ -254,7 +241,7 @@ function enviarParaPlanilha() {
         fluxo();
     })
     .catch(err => {
-        console.error(err);
+        console.error("Erro ao enviar para planilha:", err);
         textElement.innerHTML = "Erro ao registrar destino.";
         enviando = false;
     });
@@ -262,6 +249,5 @@ function enviarParaPlanilha() {
 
 fluxo();
 </script>
-
 </body>
 </html>
