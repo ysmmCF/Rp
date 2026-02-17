@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O Reino</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+body {
+    margin: 0;
+    background: #0b0b0f;
+    color: #e6d5a8;
+    font-family: 'Cinzel', serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    overflow: hidden;
+}
+
+.container {
+    width: 85%;
+    max-width: 800px;
+    opacity: 0;
+    animation: fadeIn 2s forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+#text {
+    font-size: 36px;
+    line-height: 1.5;
+}
+
+#continueHint {
+    margin-top: 40px;
+    font-size: 18px;
+    opacity: 0.6;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.8; }
+}
+
+button {
+    margin-top: 25px;
+    padding: 12px 25px;
+    background: #3a2f1d;
+    border: 1px solid #c9a74d;
+    color: #e6d5a8;
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+input {
+    margin-top: 20px;
+    padding: 12px;
+    width: 80%;
+    background: #1a1a1f;
+    border: 1px solid #c9a74d;
+    color: #e6d5a8;
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div id="text"></div>
+    <div id="continueHint"></div>
+    <div id="inputArea"></div>
+    <div id="buttons"></div>
+</div>
+
+<audio id="typeSound" src="https://www.soundjay.com/mechanical/typewriter-key-1.mp3"></audio>
+
+<script>
+const textElement = document.getElementById("text");
+const inputArea = document.getElementById("inputArea");
+const buttons = document.getElementById("buttons");
+const continueHint = document.getElementById("continueHint");
+const typeSound = document.getElementById("typeSound");
+
+let respostas = {};
+let etapa = 0;
+let podeClicar = false;
+let enviando = false;
+
+const historiaIntro = [
+    "Em uma era antiga...",
+    "O império cuidava do reino.",
+    "E é nele que você se encontra."
+];
+
+function limparTela() {
+    inputArea.innerHTML = "";
+    buttons.innerHTML = "";
+    continueHint.innerHTML = "";
+    podeClicar = false;
+}
+
+function typeWriter(text) {
+    limparTela();
+    textElement.innerHTML = "";
+
+    let i = 0;
+    let interval = setInterval(() => {
+        textElement.innerHTML += text.charAt(i);
+        typeSound.currentTime = 0;
+        typeSound.play();
+        i++;
+        if (i >= text.length) {
+            clearInterval(interval);
+            continueHint.innerHTML = "Continuar";
+            podeClicar = true;
+        }
+    }, 60);
+}
+
+document.body.addEventListener("click", () => {
+    if (podeClicar && !enviando) {
+        etapa++;
+        fluxo();
+    }
+});
+
+function pergunta(texto, chave) {
+    limparTela();
+    textElement.innerHTML = texto;
+    inputArea.innerHTML = `
+        <input type="text" id="resposta" autocomplete="off">
+        <br>
+        <button onclick="salvarResposta('${chave}')">Enviar</button>
+    `;
+}
+
+function salvarResposta(chave) {
+    const valor = document.getElementById("resposta").value.trim();
+    if (!valor) return;
+
+    respostas[chave] = valor;
+    etapa++;
+    fluxo();
+}
+
+function fluxo() {
+
+    if (etapa < historiaIntro.length) {
+        typeWriter(historiaIntro[etapa]);
+        return;
+    }
+
+    switch (etapa) {
+
+        case 3:
+            pergunta("Qual é o nome do jogador?", "jogador");
+            break;
+
+        case 4:
+            pergunta("Qual seu nome no reino?", "nome");
+            break;
+
+        case 5:
+            pergunta("Qual é a idade?", "idade");
+            break;
+
+        case 6:
+            pergunta("Qual seu papel no reino, " + respostas.nome + "?", "papel");
+            break;
+
+        case 7:
+            pergunta("Quais são os seus medo, " + respostas.nome + "?", "medo");
+            break;
+
+        case 8:
+            pergunta("Quais suas maiores qualidades?", "forca");
+            break;
+
+        case 9:
+            pergunta("Qual sua história?", "historia");
+            break;
+
+        case 10:
+            limparTela();
+            textElement.innerHTML = "Confirmar informações?";
+            buttons.innerHTML = `
+                <button onclick="confirmar(true)">Sim</button>
+                <button onclick="confirmar(false)">Não</button>
+            `;
+            break;
+
+        case 11:
+            limparTela();
+            textElement.innerHTML = "Salvando seu destino no reino...";
+            enviarParaPlanilha();
+            break;
+
+        case 12:
+            limparTela();
+            textElement.innerHTML = "O reino está a sua espera, " + respostas.nome + ".";
+            break;
+    }
+}
+
+function confirmar(valor) {
+    if (!valor) {
+        etapa = 3;
+        fluxo();
+        return;
+    }
+    etapa++;
+    fluxo();
+}
+
+function enviarParaPlanilha() {
+
+    if (enviando) return;
+    enviando = true;
+
+    fetch("https://script.google.com/macros/s/AKfycbwLbSdrTVcJ1uP7utJXWJcA_oNoAmfEdNU35jj8SpLVHKdPjYHaHDierkUOvuR6J_zn/exec", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            jogador: respostas.jogador || "",
+            nome: respostas.nome || "",
+            idade: respostas.idade || "",
+            papel: respostas.papel || "",
+            medo: respostas.medo || "",
+            forca: respostas.forca || "",
+            historia: respostas.historia || ""
+        })
+    })
+    .then(res => res.json())
+    .then(() => {
+        enviando = false;
+        etapa++;
+        fluxo();
+    })
+    .catch(err => {
+        console.error(err);
+        textElement.innerHTML = "Erro ao registrar destino.";
+        enviando = false;
+    });
+}
+
+fluxo();
+</script>
+
+</body>
+</html>
